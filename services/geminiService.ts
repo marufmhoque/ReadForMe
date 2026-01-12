@@ -72,11 +72,12 @@ async function retryWithBackoff<T>(
 
 /**
  * Analyzes a PDF file.
+ * Uses gemini-3-flash-preview for speed and efficiency on single file tasks.
  */
 export const analyzePdf = async (base64Data: string): Promise<DocumentAnalysis> => {
   return retryWithBackoff(async () => {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       contents: {
         parts: [
           { inlineData: { mimeType: 'application/pdf', data: base64Data } },
@@ -98,6 +99,7 @@ export const analyzePdf = async (base64Data: string): Promise<DocumentAnalysis> 
 
 /**
  * The "Tough Screen": Identifies outliers in a batch of files.
+ * Uses gemini-3-flash-preview for efficient batch processing.
  */
 export const detectOutliers = async (files: AnalyzedFile[]): Promise<{ mainTheme: string, outliers: { filename: string, reason: string }[] }> => {
   if (files.length < 3) return { mainTheme: "Insufficient files for cohesion check", outliers: [] };
@@ -116,7 +118,7 @@ export const detectOutliers = async (files: AnalyzedFile[]): Promise<{ mainTheme
 
   return retryWithBackoff(async () => {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       contents: { parts: [{ text: prompt }] },
       config: {
         responseMimeType: "application/json",
@@ -131,6 +133,7 @@ export const detectOutliers = async (files: AnalyzedFile[]): Promise<{ mainTheme
 
 /**
  * "Mike" Chatbot: Synthesizes answers and performs Gap Analysis with Web Search.
+ * Uses gemini-3-pro-preview for complex reasoning and synthesis.
  */
 export const askMike = async (question: string, files: AnalyzedFile[], previousChat: ChatMessage[]): Promise<string> => {
   const completedFiles = files.filter(f => f.status === AnalysisStatus.COMPLETED && f.result && f.thematicStatus !== 'OUTLIER');
@@ -149,7 +152,7 @@ export const askMike = async (question: string, files: AnalyzedFile[], previousC
   const chatHistory = previousChat.slice(-4).map(m => `${m.role.toUpperCase()}: ${m.content}`).join('\n');
 
   const prompt = `
-    You are "Mike", a senior scientific research assistant.
+    You are "Mike", a senior scientific research assistant powered by Gemini 1.5 Pro capabilities.
     User Question: "${question}"
 
     Research Context (from uploaded folder):
@@ -160,7 +163,7 @@ export const askMike = async (question: string, files: AnalyzedFile[], previousC
 
     Instructions:
     1. Answer the user's question by SYNTHESIZING information from the provided documents. Do not just list summaries.
-    2. You MUST cite your sources using APA format in-text (Author, Year) when making claims.
+    2. You MUST cite your sources using strict APA format in-text (Author, Year) when making claims.
     3. If the answer is NOT in the documents, you must perform a GAP ANALYSIS.
        - Use the 'googleSearch' tool to find the missing information.
        - Prioritize Peer-Reviewed Literature over generic websites.
@@ -170,7 +173,7 @@ export const askMike = async (question: string, files: AnalyzedFile[], previousC
 
   return retryWithBackoff(async () => {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-pro-preview',
       contents: { parts: [{ text: prompt }] },
       config: {
         tools: [{ googleSearch: {} }],
@@ -197,7 +200,7 @@ export const askMike = async (question: string, files: AnalyzedFile[], previousC
 
 /**
  * Generates the logic for the final PDF report.
- * Re-orders chronological chat into scientific structure.
+ * Uses gemini-3-pro-preview for high-quality long-context synthesis.
  */
 export const generateReportStructure = async (chatHistory: ChatMessage[]): Promise<{
   background: string,
@@ -213,6 +216,7 @@ export const generateReportStructure = async (chatHistory: ChatMessage[]): Promi
   const prompt = `
     I have a series of Q&A responses about a scientific topic. 
     Re-organize this unstructured information into a formal Scientific Report structure.
+    Igore chronological order of the questions. Group facts logically.
     
     Input Text:
     ${conversation}
@@ -227,7 +231,7 @@ export const generateReportStructure = async (chatHistory: ChatMessage[]): Promi
 
   return retryWithBackoff(async () => {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-pro-preview',
       contents: { parts: [{ text: prompt }] },
       config: {
         responseMimeType: "application/json",

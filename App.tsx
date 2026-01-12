@@ -150,8 +150,16 @@ export default function App() {
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!currentProject || !e.target.files) return;
+
+    // PRD 2.05 Recursive Report Exclusion:
+    // Ignore files that look like generated reports ("ReadForMe Analysis", "_Report.pdf")
     const newFiles: AnalyzedFile[] = Array.from(e.target.files)
       .filter(f => f.type === 'application/pdf')
+      .filter(f => {
+        const name = f.name.toLowerCase();
+        const isGeneratedReport = name.includes('readforme_analysis') || name.endsWith('_report.pdf');
+        return !isGeneratedReport;
+      })
       .map(f => ({
         id: uuidv4(),
         file: f,
@@ -159,10 +167,12 @@ export default function App() {
         thematicStatus: ThematicStatus.UNKNOWN
       }));
 
+    if (newFiles.length === 0) return;
+
     const updatedProject = {
       ...currentProject,
       files: [...currentProject.files, ...newFiles],
-      // Reset theme description to trigger a re-run of Tough Screen after new files process.
+      // Reset theme description to trigger a re-run of Tough Screen after new files process (Reactive Evolution).
       themeDescription: undefined 
     };
     
