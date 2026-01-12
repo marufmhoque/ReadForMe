@@ -1,0 +1,5 @@
+{
+  "name": "ReadForMe - Folder Analyzer",
+  "description": "Intelligent bulk PDF analysis tool. Select a folder, and the AI will analyze, categorize, and summarize every document within it automatically.",
+  "requestFramePermissions": []
+}
